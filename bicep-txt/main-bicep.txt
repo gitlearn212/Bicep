@@ -1,9 +1,0 @@
-module vm './vm.bicep' = {
-  name: 'vm'
-  params: {
-    vmName: 'a1'
-    diskSku: 'Standard_B2ms'
-    resourceGroupName: 'rg1'
-    location: '<location>'
-  }
-}
