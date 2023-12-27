@@ -1,0 +1,99 @@
+Using Azure Bicep Create 3 storage account a,b,c. (using for loop) and blob services for each storage account the creat 2 container in storage account b and c only, create all as module and call the modules to main bicep and deploy
+
+==================
+
+//To achieve the described scenario using Azure Bicep, you can follow the steps below. I'll provide an example Bicep code for this scenario:
+
+//Create a Bicep module for the storage account (storageAccount.bicep):
+
+param storageAccountName string
+
+resource storageAccount 'Microsoft.Storage/storageAccounts@2019-06-01' = {
+  name: storageAccountName
+  location: 'East US'
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+}
+
+//Create a Bicep module for the blob service (blobService.bicep):
+
+param storageAccountName string
+param containerName string
+
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2021-07-01' = {
+  name: '${storageAccountName}/default'
+}
+
+resource container 'containers@2021-07-01' = {
+  name: containerName
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+//Create a main Bicep file (main.bicep) that uses loops to create three storage accounts and their associated blob services and containers:
+//bicep
+
+param storageAccountNames array = ['a', 'b', 'c']
+
+module storageAccount 'storageAccount.bicep' = [for storageAccountName in storageAccountNames: {
+  name: storageAccountName
+}]
+
+module blobServiceB 'blobService.bicep' = {
+  name: storageAccountNames[1]
+  storageAccountName: storageAccountNames[1]
+  containerName: 'containerB'
+}
+
+module blobServiceC 'blobService.bicep' = {
+  name: storageAccountNames[2]
+  storageAccountName: storageAccountNames[2]
+  containerName: 'containerC'
+}
+
+//Deploy the Bicep file using the Azure CLI:
+
+# Build the Bicep files
+az bicep build -f main.bicep -o main.json
+
+# Deploy the Bicep file
+az deployment group create --resource-group <your-resource-group> --template-file main.json
+
+
+/*Make sure to replace <your-resource-group> with the name of your Azure Resource Group. This example assumes that you have the Azure CLI installed and configured.
+
+This example demonstrates how to create three storage accounts (a, b, c) and two containers (containerB, containerC) in storage accounts b and c using Azure Bicep modules and loops. Adjust the parameters and resource properties as needed for your specific requirements.*/
+
+
+ALSO ===     
+// storage.bicep
+param storageAccountName string
+param location string = resourceGroup().location
+param containers array = []
+
+resource storageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
+  name: storageAccountName
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+}
+
+resource blobServices 'Microsoft.Storage/storageAccounts/blobServices@2021-04-01' = {
+  name: '${storageAccount.name}/default'
+  dependsOn: [
+    storageAccount
+  ]
+}
+
+resource containers 'Microsoft.Storage/storageAccounts/blobServices/containers@2021-04-01' = [for container in containers: {
+  name: '${storageAccount.name}/default/${container}'
+  dependsOn: [
+    blobServices
+  ]
+}]
+

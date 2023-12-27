@@ -1,0 +1,45 @@
+This Puppet manifest does the following:
+
+Installs the vsftpd package.
+Ensures that the vsftpd service is running and enabled.
+Deploys a configuration file (vsftpd.conf) from the Puppet module.
+
+class vsftpd {
+  package { 'vsftpd':
+    ensure => installed,
+  }
+
+  service { 'vsftpd':
+    ensure  => running,
+    enable  => true,
+    require => Package['vsftpd'],
+  }
+
+  file { '/etc/vsftpd.conf':
+    ensure  => file,
+    source  => 'puppet:///modules/vsftpd/vsftpd.conf',
+    notify  => Service['vsftpd'],
+  }
+}
+
+Create a vsftpd configuration file and place it in your Puppet module directory. For example, create a file named vsftpd.conf with your desired vsftpd configuration:
+# /etc/vsftpd.conf
+
+anonymous_enable=NO
+local_enable=YES
+write_enable=YES
+local_umask=022
+dirmessage_enable=YES
+xferlog_enable=YES
+connect_from_port_20=YES
+xferlog_std_format=YES
+listen=YES
+pam_service_name=vsftpd
+userlist_enable=YES
+tcp_wrappers=YES
+
+Additional from forge module below
+https://forge.puppet.com/modules?q=vsftpd
+
+
+

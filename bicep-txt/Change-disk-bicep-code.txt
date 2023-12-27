@@ -1,0 +1,71 @@
+In my tenant I have multiple subscription like abc, def,ghj, in each subscription tere are several resource groups and resources. I want to change the disk sku from "Standard_B1s" series to "Standard_B2ms" series on virtual machine reside on subscription def, resourcegroupname 'rg1' and vm name 'a1'. Write a bicep script to deploy with powershell using whatif first including azure login and setting context.
+
+
+
+param vmName string = 'a1'
+param location string = 'yourLocation'
+param vmSize string = 'Standard_B2ms'
+
+resource vm 'Microsoft.Compute/virtualMachines@2021-04-01' = {
+  name: vmName
+  location: location
+  properties: {
+    hardwareProfile: {
+      vmSize: vmSize
+    }
+  }
+}
+
+New-AzResourceGroupDeployment -ResourceGroupName "rg1" -TemplateFile "./yourBicepFile.bicep" -WhatIf
+
+Connect-AzAccount
+Set-AzContext -Subscription "def"
+
+
+OR =============================================
+
+# Login to Azure
+$tenantId = "<tenant-id>"
+$subscriptionId = "<subscription-id>"
+$clientId = "<client-id>"
+$clientSecret = "<client-secret>"
+
+$securePassword = ConvertTo-SecureString -String $clientSecret -AsPlainText -Force
+$credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $clientId, $securePassword
+
+Connect-AzAccount -Credential $credential -TenantId $tenantId -ServicePrincipal
+
+# Set the context to the specific subscription
+Select-AzSubscription -SubscriptionId $subscriptionId
+
+# Define the Bicep script
+$bicepScript = @"
+param vmName string = 'a1'
+param resourceGroupName string = 'rg1'
+
+resource vm 'Microsoft.Compute/virtualMachines@2021-04-01' existing = {
+  name: vmName
+  scope: resourceGroup(resourceGroupName)
+}
+
+resource vmSize 'Microsoft.Compute/virtualMachines@2021-04-01' = {
+  name: vm.name
+  properties: {
+    hardwareProfile: {
+      vmSize: 'Standard_B2ms'
+    }
+  }
+}
+"@
+
+# Write the Bicep script to a file
+$bicepScript | Out-File -FilePath .\changeVmSize.bicep
+
+# Compile the Bicep file to ARM template
+az bicep build --file .\changeVmSize.bicep --outfile .\changeVmSize.json
+
+# Deploy the ARM template with --what-if first
+az deployment group what-if --resource-group rg1 --template-file .\changeVmSize.json
+
+# If the what-if result is as expected, deploy the ARM template
+az deployment group create --resource-group rg1 --template-file .\changeVmSize.json

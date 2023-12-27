@@ -1,0 +1,30 @@
+#Set-Location -Path (Split-Path $PSCommandPath) # Only works if running as a script (F5)
+
+#Connect-AzAccount -Tenant '3516f40a-5ae9-4956-bbab-395162e589ce' # UoGreenwich Directory
+
+#. ..\..\subscriptionIds.ps1 # dot source the subscription ids
+
+#
+# A subnet delegation for the target outbound subnet must exist for Microsoft.Web/serverFarms
+#
+
+$subscriptionId = "6e493c19-ff46-4ce4-93a7-c60da7f8b0a4"
+$resourceGroupName = 'rg-prd-nessus-01'
+$location = 'uksouth'
+$templateFile = 'main.bicep'
+$templateParameterFile = 'main.parameters.prod.json'
+
+Select-AzSubscription -Subscription $subscriptionId -TenantId '3516f40a-5ae9-4956-bbab-395162e589ce'
+
+# Get the resource tags from the parameters JSON and convert to a usable tag object for Resource Group
+$jsonObj = (Get-Content $templateParameterFile | ConvertFrom-Json).parameters.resourceGroupTags.value
+$Tags = @{}
+foreach ($property in $jsonObj.PSObject.Properties) { $Tags[$property.Name] = $property.Value }
+
+New-AzResourceGroup -Name $resourceGroupName -Location $location -Tag $Tags -Force
+
+New-AzResourceGroupDeployment -TemplateFile $templateFile `
+                                -TemplateParameterFile $templateParameterFile `
+                                -ResourceGroupName $resourceGroupName `
+                                -Verbose `
+                                #-WhatIf

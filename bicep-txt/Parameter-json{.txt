@@ -1,0 +1,14 @@
+{
+  "vmName": {
+    "value": "a1"
+  },
+  "diskSku": {
+    "value": "Standard_B2ms"
+  },
+  "resourceGroupName": {
+    "value": "rg1"
+  },
+  "location": {
+    "value": "<location>"
+  }
+}
